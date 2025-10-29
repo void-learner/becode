@@ -11,7 +11,7 @@ df = pd.read_csv("uber.csv")
 
 df.dropna(inplace=True) # Remove missing values
 df['pickup_datetime'] = pd.to_datetime(df['pickup_datetime'], errors='coerce')
-df = df[df['pickup_datetime'].notnull()] 
+df = df[df['pickup_datetime'].notnull()]
 
 # Filter invalid coordinates
 df = df[
@@ -32,12 +32,14 @@ def haversine(lon1, lat1, lon2, lat2):
  dlon = lon2 - lon1
  dlat = lat2 - lat1
  a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
- return 2 * R
+ c=2*asin(sqrt(a))
+ return c * R
 
 df['distance_km'] = df.apply(lambda row: haversine(
  row['pickup_longitude'], row['pickup_latitude'],
  row['dropoff_longitude'], row['dropoff_latitude']), axis=1
  )
+
 
 plt.figure(figsize=(14, 10))
 # Boxplots
@@ -97,8 +99,10 @@ df = remove_outliers(df, 'fare_amount')
 df = remove_outliers(df, 'distance_km') 
 # Filter remaining invalid distances
 df = df[(df['distance_km'] > 0) & (df['distance_km'] < 100)]
-# Drop unused columns
-df.drop(['key', 'pickup_datetime', 'fare_z', 'dist_z'], axis=1, inplace=True) 
+for col in ['key', 'fare_z', 'dist_z']:
+    if col in df.columns:
+        df.drop(columns=[col], inplace=True)
+df.drop(columns=['pickup_datetime'], inplace=True)
 
 plt.figure(figsize=(8, 6))
 sns.heatmap(df.corr(), annot=True, cmap='coolwarm')
@@ -122,8 +126,6 @@ for name, model in models.items():
  rmse = np.sqrt(mean_squared_error(y_test, y_pred))
  r2 = r2_score(y_test, y_pred)
  results[name] = {'R2 Score': round(r2, 4), 'RMSE': round(rmse, 4)} 
-
-# Predicted vs Actual Plot
  plt.figure(figsize=(6, 6))
  plt.scatter(y_test, y_pred, alpha=0.3)
  plt.plot([0, 200], [0, 200], 'r--')
