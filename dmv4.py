@@ -1,196 +1,94 @@
 import pandas as pd
-import numpy as np
-from matplotlib import pyplot as pyplot
-import warnings
+import matplotlib.pyplot as plt 
 
-warnings.filterwarnings('ignore')
+df  = pd.read_csv('RealEstate_price.csv')
+df.head()
 
-df1 = pd.read_csv("/content/sample_data/Bengaluru_House_Data.csv", engine='python', on_bad_lines='skip')
+df.shape
 
-df1.head()
+df.size
 
-df1.shape
+df.info()
 
-df1.columns
+df['Price'].isnull().sum()
 
-df1['area_type']
+df['Price'] = df['Price'].fillna(df['Price'].mean())
 
-df1['area_type'].unique()
+df['Price'].isnull().sum()
 
-df1['area_type'].value_counts()
+df.isnull().sum()
 
-df2 = df1.drop(['area_type','society','balcony','availability'],axis='columns')
+df.duplicated().sum()
 
-df2.shape
+df.info()
 
-df2.isnull().sum()
+df['Sales_date'] = pd.to_datetime(df['Sales_date'])
 
-df3 = df2.dropna()
-df3.isnull().sum()
+df.info()
 
-df3.shape
+# basic filtering accordinf to need 
+df.head()
 
-df3['size'].unique()
+df[df['Price']>100000]  
 
-df3['bhk'] = df3['size'].apply(lambda x: int(x.split(' ')[0]))
+df[df['Bedrooms'] > 3]
 
-df3.head()
+east_houses = df[df['Neighborhood'] == 'East']
+east_houses
 
-df3[df3.bhk>20]
+from sklearn.preprocessing import LabelEncoder
 
-df3.total_sqft.unique()
+# Identify categorical columns
+cat_cols = df.select_dtypes(include='object').columns
+print("\nCategorical Columns:", cat_cols.tolist())
 
-def is_float(x):
-    try:
-        float(x)
-        return True
-    except(ValueError, TypeError):
-        return False
+# Label encode binary columns, one-hot encode multi-category columns
+le = LabelEncoder()
+for col in cat_cols:
+    if df[col].nunique() == 2:
+        df[col] = le.fit_transform(df[col])
 
-df3[~df3['total_sqft'].apply(is_float)].head(10)
+# Average price by number of bedrooms
+avg_price_by_bedrooms = df.groupby('Bedrooms')['Price'].mean()
+print("\nAverage Sale Price by Bedrooms:")
+print(avg_price_by_bedrooms)
 
-def convert_sqft_to_num(x):
-    tokens = x.split('-')
-    if len(tokens) == 2:
-        try:
-            return (float(tokens[0])+float(tokens[1]))/2
-        except ValueError:
-            return None
-    try:
-        return float(x)
-    except ValueError:
-        return None
+avg_price_by_neighborhood = df.groupby('Neighborhood')['Price'].mean().sort_values(ascending=False)
+print("\nAverage Sale Price by Neighborhood:")
+print(avg_price_by_neighborhood)
 
-result = convert_sqft_to_num('2100 - 2850')
-print(result)
-
-convert_sqft_to_num('34.46Sq. Meter')
-df4 = df3.copy()
-df4.total_sqft = df4.total_sqft.apply(convert_sqft_to_num)
-df4
-
-df4 = df4[df4.total_sqft.notnull()]
-df4
-
-df4.loc[30]
-
-df5 = df4.copy()
-df5['price_per_sqft'] = df5['price']*100000/df5['total_sqft']
-df5.head()
-
-df5_stats = df5['price_per_sqft'].describe()
-df5_stats
-
-df5.to_csv("bhp.csv",index=False)
-
-df5.location = df5.location.apply(lambda x: x.strip())
-location_stats = df5['location'].value_counts(ascending=False)
-location_stats
-
-len(location_stats[location_stats>10])
-len(location_stats)
-len(location_stats[location_stats<=10])
-
-location_stats_less_than_10 = location_stats[location_stats<=10]
-location_stats_less_than_10
-
-len(df5.location.unique())
-
-df5.location = df5.location.apply(lambda x: 'other' if x in location_stats_less_than_10 else x)
-len(df5.location.unique())
-
-df5.head(10)
-
-df5[df5.total_sqft/df5.bhk<300].head()
-
-df5.shape
-
-df6 = df5[~(df5.total_sqft/df5.bhk<300)]
-df6.shape
-
-df6.columns
+df.head()
 
 import matplotlib.pyplot as plt
 
-plt.boxplot(df6['total_sqft'])
-plt.show()
+num_cols = ['Price', 'SqFt', 'Bedrooms', 'Bathrooms', 'Offers']
 
-Q1 = np.percentile(df6['total_sqft'], 25.) # 25th percentile of the data of the given feature
-Q3 = np.percentile(df6['total_sqft'], 75.) # 75th percentile of the data of the given feature
-IQR = Q3-Q1 #Interquartile Range
-ll = Q1 - (1.5*IQR)
-ul = Q3 + (1.5*IQR)
-upper_outliers = df6[df6['total_sqft'] > ul].index.tolist()
-lower_outliers = df6[df6['total_sqft'] < ll].index.tolist()
-bad_indices = list(set(upper_outliers + lower_outliers))
-drop = True
-if drop:
-    df6.drop(bad_indices, inplace = True, errors = 'ignore')
+# Visualize distributions
+for col in num_cols:
+    plt.figure(figsize=(6,4))
+    plt.boxplot(df[col])
+    plt.title(f"Boxplot of {col}")
+    plt.show()
 
-plt.boxplot(df6['bath'])
-plt.show()
+#Apply IQR-based capping
+for col in num_cols:
+    Q1 = df[col].quantile(0.25)
+    Q3 = df[col].quantile(0.75)
+    IQR = Q3 - Q1
+    lower, upper = Q1 - 1.5*IQR, Q3 + 1.5*IQR
+    df[col] = df[col].clip(lower, upper)
+#after clipping 
+import matplotlib.pyplot as plt
 
-Q1 = np.percentile(df6['bath'], 25.) # 25th percentile of the data of the given feature
-Q3 = np.percentile(df6['bath'], 75.) # 75th percentile of the data of the given feature
-IQR = Q3-Q1 #Interquartile Range
-ll = Q1 - (1.5*IQR)
-ul = Q3 + (1.5*IQR)
-upper_outliers = df6[df6['bath'] > ul].index.tolist()
-lower_outliers = df6[df6['bath'] < ll].index.tolist()
-bad_indices = list(set(upper_outliers + lower_outliers))
-drop = True
-if drop:
-    df6.drop(bad_indices, inplace = True, errors = 'ignore')
-plt.boxplot(df6['price'])
-plt.show()
+num_cols = ['Price', 'SqFt', 'Bedrooms', 'Bathrooms', 'Offers']
 
-Q1 = np.percentile(df6['price'], 25.) # 25th percentile of the data of the given feature
-Q3 = np.percentile(df6['price'], 75.) # 75th percentile of the data of the given feature
-IQR = Q3-Q1 #Interquartile Range
-ll = Q1 - (1.5*IQR)
-ul = Q3 + (1.5*IQR)
+# Visualize distributions
+for col in num_cols:
+    plt.figure(figsize=(6,4))
+    plt.boxplot(df[col])
+    plt.title(f"Boxplot of {col}")
+    plt.show()
 
-upper_outliers = df6[df6['price'] > ul].index.tolist()
-lower_outliers = df6[df6['price'] < ll].index.tolist()
-bad_indices = list(set(upper_outliers + lower_outliers))
-drop = True
-if drop:
-    df6.drop(bad_indices, inplace = True, errors = 'ignore')
-
-plt.boxplot(df6['bhk'])
-plt.show()
-
-Q1 = np.percentile(df6['price_per_sqft'], 25.) # 25th percentile of the data of the given feature
-Q3 = np.percentile(df6['price_per_sqft'], 75.) # 75th percentile of the data of the given feature
-IQR = Q3-Q1 #Interquartile Range
-ll = Q1 - (1.5*IQR)
-ul = Q3 + (1.5*IQR)
-upper_outliers = df6[df6['price_per_sqft'] > ul].index.tolist()
-lower_outliers = df6[df6['price_per_sqft'] < ll].index.tolist()
-bad_indices = list(set(upper_outliers + lower_outliers))
-drop = True
-if drop:
-    df6.drop(bad_indices, inplace = True, errors = 'ignore')
-
-plt.boxplot(df6['price_per_sqft'])
-plt.show()
-
-Q1 = np.percentile(df6['bhk'], 25.) # 25th percentile of the data of the given feature
-Q3 = np.percentile(df6['bhk'], 75.) # 75th percentile of the data of the given feature
-IQR = Q3-Q1 #Interquartile Range
-ll = Q1 - (1.5*IQR)
-ul = Q3 + (1.5*IQR)
-upper_outliers = df6[df6['bhk'] > ul].index.tolist()
-lower_outliers = df6[df6['bhk'] < ll].index.tolist()
-bad_indices = list(set(upper_outliers + lower_outliers))
-drop = True
-if drop:
-    df6.drop(bad_indices, inplace = True, errors = 'ignore')
-
-plt.boxplot(df6['price_per_sqft'])
-plt.show()
-
-df6.shape
-
-X = df6.drop(['price'],axis='columns')
-X.head(3)
+# Export cleaned dataset for further use
+df.to_csv("Cleaned_RealEstate_Prices.csv", index=False)
+print("\nCleaned dataset saved as 'Cleaned_RealEstate_Prices.csv'")
