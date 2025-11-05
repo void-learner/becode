@@ -85,3 +85,19 @@ plt.title('Relationship between AQI and Pollutant Levels')
 plt.legend()
 plt.grid(True)
 plt.show()
+
+#################
+data['Date'].fillna(method='ffill', inplace=True)
+data['Time'].fillna(method='ffill', inplace=True)
+data.isnull().sum()
+
+top10=sns.barplot(x='CO(GT)', y='Time', data=data[:10], color='red', ci=None)
+top10.invert_yaxis()
+
+sns.lineplot(x='CO(GT)', y="Time", data=data[:10], color='navy', ci=None)
+
+sns.boxplot(x='CO(GT)', data=data[:1000], color='navy')
+plt.xlabel("CO(GT)")
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
