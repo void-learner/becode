@@ -1,57 +1,45 @@
 import numpy as np
-from sklearn.datasets import load_digits
-from matplotlib import pyplot as plt
-
-dataset = load_digits()
-
-dataset.target
-
-dataset.data.shape
-
-dataset.target.shape
-
-dataset.images.shape
-
-dataset.images
-
-df2 = dataset.images.reshape(1,-1)
-df2.shape
-
-len(dataset.images)
-
-# Check the nth image in dataset
-n=2
-
-plt.gray()
-plt.matshow(dataset.images[n])
-plt.show()
-
-dataset.images[n]
-
-X = dataset.images.reshape((len(dataset.images), -1))
-X.shape
-
-Y =  dataset.target
-Y.shape
-
+import matplotlib.pyplot as plt
+from sklearn import datasets
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score
 
-X_train, X_test, y_train, y_test = train_test_split(X,Y, test_size=0.25, random_state=0)
-print(y_train.shape)
-print(X_test.shape)
+# Load handwritten digits dataset
+digits = datasets.load_digits()
 
-from sklearn import svm
-model = svm.SVC(gamma=0.001)
-model.fit(X_train,y_train)
+# Flatten the images 
+X = digits.data
+y = digits.target
 
-n = 1
-result = model.predict(dataset.images[n].reshape((1,-1)))
-plt.imshow(dataset.images[n],cmap=plt.cm.gray_r,interpolation='nearest')
-print(result)
+# Normalize features
+scaler = StandardScaler()
+X = scaler.fit_transform(X)
 
-print("\n")
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-plt.axis("off")
-plt.title('%i' %result)
-plt.show()
+# Train SVM model
+svm_model = SVC(kernel='rbf', gamma=0.05, C=10)
+svm_model.fit(X_train, y_train)
 
+# Evaluate
+y_pred = svm_model.predict(X_test)
+print(f"Model Accuracy: {accuracy_score(y_test, y_pred) * 100:.2f}%")
+
+# Function to visualize and predict single digits 
+def predict_digit_image(index):
+    image = digits.images[index]
+    data = digits.data[index].reshape(1, -1)
+    data = scaler.transform(data)
+    prediction = svm_model.predict(data)[0]
+
+    plt.imshow(image, cmap='gray')
+    plt.title(f"Predicted Digit: {prediction}")
+    plt.axis('off')
+    plt.show()
+
+# Example usage:
+n = int(input("Chosse no. from 0-1796: "))
+predict_digit_image(n)  
